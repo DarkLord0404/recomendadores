@@ -1,0 +1,271 @@
+{
+  "medicina_general": {
+    "keywords": [
+      {"term": "fiebre", "weight": 6},
+      {"term": "malestar general", "weight": 5},
+      {"term": "fatiga", "weight": 4},
+      {"term": "cefalea", "weight": 5},
+      {"term": "tos", "weight": 5},
+      {"term": "congestion nasal", "weight": 4},
+      {"term": "dolor de garganta", "weight": 5},
+      {"term": "vomito", "weight": 4},
+      {"term": "diarrea", "weight": 4}
+    ],
+    "red_flags": [],
+    "negative_keywords": [],
+    "synonyms": {
+      "cefalea": ["dolor de cabeza"],
+      "congestion nasal": ["nariz tapada"],
+      "vomito": ["ganas de vomitar", "he vomitado"]
+    }
+  },
+  "cardiologia": {
+    "keywords": [
+      {"term": "dolor toracico", "weight": 10},
+      {"term": "palpitaciones", "weight": 8},
+      {"term": "disnea", "weight": 8},
+      {"term": "sincope", "weight": 9},
+      {"term": "edema de piernas", "weight": 6},
+      {"term": "fatiga", "weight": 4},
+      {"term": "hipertension", "weight": 5}
+    ],
+    "red_flags": [
+      {"term": "dolor opresivo en pecho", "weight": 18},
+      {"term": "disnea en reposo", "weight": 15},
+      {"term": "perdida de conciencia", "weight": 15}
+    ],
+    "negative_keywords": [
+      {"term": "ardor al orinar", "weight": -6},
+      {"term": "erupcion en piel", "weight": -4}
+    ],
+    "synonyms": {
+      "dolor toracico": ["dolor en el pecho", "presion en el pecho", "opresion en el pecho"],
+      "disnea": ["falta de aire", "me ahogo", "dificultad para respirar"],
+      "sincope": ["desmayo", "me desvaneci"]
+    }
+  },
+  "neumologia": {
+    "keywords": [
+      {"term": "tos", "weight": 8},
+      {"term": "disnea", "weight": 9},
+      {"term": "sibilancias", "weight": 8},
+      {"term": "dolor al respirar", "weight": 7},
+      {"term": "expectoracion", "weight": 6},
+      {"term": "ronquido", "weight": 3},
+      {"term": "apnea del sueno", "weight": 6}
+    ],
+    "red_flags": [
+      {"term": "dificultad respiratoria severa", "weight": 18},
+      {"term": "cianosis", "weight": 18},
+      {"term": "hemoptisis", "weight": 15}
+    ],
+    "negative_keywords": [
+      {"term": "ardor epigastrico", "weight": -4}
+    ],
+    "synonyms": {
+      "sibilancias": ["silbido al respirar"],
+      "expectoracion": ["flema", "esputo"],
+      "hemoptisis": ["tos con sangre"],
+      "apnea del sueno": ["apnea del sueño"]
+    }
+  },
+  "gastroenterologia": {
+    "keywords": [
+      {"term": "dolor abdominal", "weight": 9},
+      {"term": "nauseas", "weight": 6},
+      {"term": "vomito", "weight": 7},
+      {"term": "diarrea", "weight": 7},
+      {"term": "estrenimiento", "weight": 5},
+      {"term": "reflujo", "weight": 6},
+      {"term": "distension abdominal", "weight": 5},
+      {"term": "sangrado digestivo", "weight": 10}
+    ],
+    "red_flags": [
+      {"term": "vomito con sangre", "weight": 18},
+      {"term": "heces negras", "weight": 16},
+      {"term": "ictericia", "weight": 15},
+      {"term": "dolor abdominal intenso", "weight": 14}
+    ],
+    "negative_keywords": [
+      {"term": "dolor ocular", "weight": -5}
+    ],
+    "synonyms": {
+      "nauseas": ["ganas de vomitar"],
+      "reflujo": ["agruras", "acidez"],
+      "sangrado digestivo": ["sangre en heces", "vomito con sangre"]
+    }
+  },
+  "neurologia": {
+    "keywords": [
+      {"term": "cefalea", "weight": 8},
+      {"term": "convulsiones", "weight": 10},
+      {"term": "mareo", "weight": 6},
+      {"term": "vertigo", "weight": 6},
+      {"term": "debilidad", "weight": 8},
+      {"term": "temblor", "weight": 7},
+      {"term": "alteracion de memoria", "weight": 6},
+      {"term": "hormigueo", "weight": 7}
+    ],
+    "red_flags": [
+      {"term": "debilidad de un lado del cuerpo", "weight": 20},
+      {"term": "dificultad para hablar", "weight": 20},
+      {"term": "convulsion", "weight": 16},
+      {"term": "cefalea subita intensa", "weight": 18}
+    ],
+    "negative_keywords": [
+      {"term": "dolor al orinar", "weight": -5}
+    ],
+    "synonyms": {
+      "cefalea": ["dolor de cabeza"],
+      "hormigueo": ["adormecimiento", "se me duerme"],
+      "debilidad": ["falta de fuerza"]
+    }
+  },
+  "dermatologia": {
+    "keywords": [
+      {"term": "erupcion", "weight": 8},
+      {"term": "prurito", "weight": 7},
+      {"term": "manchas en piel", "weight": 7},
+      {"term": "lesion cutanea", "weight": 8},
+      {"term": "acne", "weight": 6},
+      {"term": "urticaria", "weight": 8},
+      {"term": "caida del cabello", "weight": 5}
+    ],
+    "red_flags": [
+      {"term": "lesion que sangra", "weight": 14},
+      {"term": "ampollas extensas", "weight": 16},
+      {"term": "hinchazon de labios", "weight": 16}
+    ],
+    "negative_keywords": [
+      {"term": "dolor toracico", "weight": -5}
+    ],
+    "synonyms": {
+      "prurito": ["rasquina", "picazon"],
+      "erupcion": ["brote", "ronchas"],
+      "manchas en piel": ["puntos en la piel"]
+    }
+  },
+  "urologia": {
+    "keywords": [
+      {"term": "disuria", "weight": 8},
+      {"term": "hematuria", "weight": 9},
+      {"term": "dolor lumbar", "weight": 7},
+      {"term": "colico", "weight": 8},
+      {"term": "retencion urinaria", "weight": 10},
+      {"term": "incontinencia urinaria", "weight": 7},
+      {"term": "masa testicular", "weight": 8},
+      {"term": "dolor testicular", "weight": 8}
+    ],
+    "red_flags": [
+      {"term": "sangre en la orina", "weight": 15},
+      {"term": "no puedo orinar", "weight": 18},
+      {"term": "dolor testicular agudo", "weight": 18}
+    ],
+    "negative_keywords": [
+      {"term": "tos", "weight": -4}
+    ],
+    "synonyms": {
+      "disuria": ["ardor al orinar", "dolor al orinar"],
+      "hematuria": ["sangre en la orina"],
+      "colico": ["dolor tipo colico"]
+    }
+  },
+  "ginecologia": {
+    "keywords": [
+      {"term": "sangrado vaginal", "weight": 9},
+      {"term": "dolor pelvico", "weight": 8},
+      {"term": "flujo vaginal", "weight": 7},
+      {"term": "irregularidad menstrual", "weight": 7},
+      {"term": "amenorrea", "weight": 6},
+      {"term": "dolor durante relaciones", "weight": 6},
+      {"term": "embarazo", "weight": 7}
+    ],
+    "red_flags": [
+      {"term": "sangrado en embarazo", "weight": 18},
+      {"term": "dolor pelvico intenso", "weight": 15},
+      {"term": "flujo con mal olor y fiebre", "weight": 14}
+    ],
+    "negative_keywords": [
+      {"term": "tos con flema", "weight": -4}
+    ],
+    "synonyms": {
+      "sangrado vaginal": ["sangrado uterino"],
+      "flujo vaginal": ["secrecion vaginal"],
+      "amenorrea": ["no me llega la menstruacion"]
+    }
+  },
+  "ortopedia": {
+    "keywords": [
+      {"term": "dolor articular", "weight": 8},
+      {"term": "dolor de rodilla", "weight": 8},
+      {"term": "dolor de hombro", "weight": 8},
+      {"term": "dolor de espalda", "weight": 7},
+      {"term": "trauma", "weight": 9},
+      {"term": "esguince", "weight": 8},
+      {"term": "fractura", "weight": 10},
+      {"term": "limitacion de movimiento", "weight": 7}
+    ],
+    "red_flags": [
+      {"term": "deformidad", "weight": 16},
+      {"term": "incapacidad para caminar", "weight": 16},
+      {"term": "dolor intenso tras caida", "weight": 15}
+    ],
+    "negative_keywords": [
+      {"term": "ardor al orinar", "weight": -4}
+    ],
+    "synonyms": {
+      "trauma": ["golpe"],
+      "limitacion de movimiento": ["no puedo mover bien"],
+      "esguince": ["torcedura"]
+    }
+  },
+  "psiquiatria": {
+    "keywords": [
+      {"term": "ansiedad", "weight": 8},
+      {"term": "tristeza", "weight": 7},
+      {"term": "insomnio", "weight": 6},
+      {"term": "ataques de panico", "weight": 9},
+      {"term": "alucinaciones", "weight": 10},
+      {"term": "ideas suicidas", "weight": 10},
+      {"term": "cambios de conducta", "weight": 7}
+    ],
+    "red_flags": [
+      {"term": "quiero morir", "weight": 20},
+      {"term": "escucho voces", "weight": 18},
+      {"term": "intento suicida", "weight": 20},
+      {"term": "agresividad severa", "weight": 16}
+    ],
+    "negative_keywords": [
+      {"term": "fractura", "weight": -5}
+    ],
+    "synonyms": {
+      "ataques de panico": ["crisis de ansiedad"],
+      "alucinaciones": ["escucho cosas", "veo cosas que no estan"],
+      "ideas suicidas": ["quiero matarme", "no quiero vivir"]
+    }
+  },
+  "otorrinolaringologia": {
+    "keywords": [
+      {"term": "dolor de oido", "weight": 8},
+      {"term": "hipoacusia", "weight": 7},
+      {"term": "vertigo", "weight": 6},
+      {"term": "dolor de garganta", "weight": 7},
+      {"term": "ronquera", "weight": 6},
+      {"term": "sinusitis", "weight": 7},
+      {"term": "epistaxis", "weight": 7}
+    ],
+    "red_flags": [
+      {"term": "dificultad para tragar", "weight": 14},
+      {"term": "dificultad para respirar por garganta", "weight": 18},
+      {"term": "sangrado nasal persistente", "weight": 14}
+    ],
+    "negative_keywords": [
+      {"term": "dolor lumbar", "weight": -4}
+    ],
+    "synonyms": {
+      "hipoacusia": ["escucho menos", "perdida de audicion"],
+      "epistaxis": ["sangrado nasal"],
+      "ronquera": ["voz ronca"]
+    }
+  }
+}
