@@ -39,9 +39,10 @@ class RecomendadorService
     public function analizar(
         string  $sintomas,
         ?string $enfermedadesPrevias = null,
-        ?int    $edad = null
+        ?int    $edad = null,
+        ?string $sexo = null
     ): array {
-        $gptData           = $this->extraerTerminosViaGPT($sintomas, $enfermedadesPrevias);
+        $gptData           = $this->extraerTerminosViaGPT($sintomas, $enfermedadesPrevias, $edad, $sexo);
         $normalizedTerms   = $this->matcher->normalizeTerms($gptData['terminos_identificados'] ?? []);
         $topEspecialidades = $this->matcher->scoreSpecialties($normalizedTerms);
 
@@ -134,7 +135,7 @@ class RecomendadorService
      * de términos reconocidos del JSON.
      * GPT devuelve SOLO términos que estén en esa lista.
      */
-    private function extraerTerminosViaGPT(string $sintomas, ?string $previas): array
+    private function extraerTerminosViaGPT(string $sintomas, ?string $previas, ?int $edad = null, ?string $sexo = null): array
     {
         $termsList = $this->matcher->buildTermsList();
         $termsStr  = implode(', ', $termsList);
@@ -143,11 +144,18 @@ class RecomendadorService
         if ($previas) {
             $userContent .= "\nAntecedentes: {$previas}";
         }
+        if ($edad !== null) {
+            $userContent .= "\nEdad del paciente: {$edad} años";
+        }
+        if ($sexo !== null) {
+            $userContent .= "\nSexo biológico: {$sexo}";
+        }
 
         $systemPrompt = <<<'SYS'
-Eres un extractor de terminología médica. Analiza la descripción del paciente
-e identifica qué términos médicos de la lista proporcionada corresponden a lo
-que describe. Responde solo con JSON válido.
+Eres un extractor de terminología médica especializado. Analiza la descripción del paciente
+(incluyendo edad y sexo biológico si se proporcionan, ya que influyen en la prevalencia de
+ciertas enfermedades) e identifica qué términos médicos de la lista corresponden a lo que
+describe. Responde solo con JSON válido.
 SYS;
 
         $userPrompt = <<<PROMPT

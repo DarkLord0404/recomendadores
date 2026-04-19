@@ -32,12 +32,14 @@ class RecomendacionController extends Controller
             'sintomas'             => ['required', 'string', 'min:5', 'max:1000'],
             'enfermedades_previas' => ['nullable', 'string', 'max:500'],
             'edad'                 => ['nullable', 'integer', 'min:0', 'max:120'],
+            'sexo'                 => ['nullable', 'string', 'in:masculino,femenino'],
         ]);
 
         $resultado = $this->recomendadorService->analizar(
             sintomas:             $validated['sintomas'],
             enfermedadesPrevias:  $validated['enfermedades_previas'] ?? null,
             edad:                 $validated['edad'] ?? null,
+            sexo:                 $validated['sexo'] ?? null,
         );
 
         return response()->json($resultado);
