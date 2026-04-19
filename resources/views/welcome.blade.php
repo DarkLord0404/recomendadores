@@ -181,7 +181,7 @@
                 <svg class="w-3.5 h-3.5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
                 </svg>
-                <span class="text-xs font-medium text-cyan-700">GPT-4o-mini</span>
+                <span class="text-xs font-medium text-cyan-700">IA Médica</span>
             </div>
         </div>
     </header>
@@ -337,7 +337,7 @@
                     <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2 text-xs text-slate-400">
                             <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 flex-shrink-0"></span>
-                            GPT-4o-mini — extracción de síntomas
+                            IA — análisis y extracción de síntomas
                         </div>
                         <div class="flex items-center gap-2 text-xs text-slate-400">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
