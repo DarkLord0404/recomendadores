@@ -15,6 +15,7 @@ class KeywordMatcherService
     /** Mapeo de clave JSON → nombre oficial en la BD */
     private const SPECIALTY_MAP = [
         'medicina_general'     => 'Medicina General',
+        'pediatria'            => 'Pediatría',
         'cardiologia'          => 'Cardiología',
         'neumologia'           => 'Neumología',
         'gastroenterologia'    => 'Gastroenterología',

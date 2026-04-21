@@ -267,5 +267,34 @@
       "epistaxis": ["sangrado nasal"],
       "ronquera": ["voz ronca"]
     }
+  },
+  "pediatria": {
+    "keywords": [
+      {"term": "fiebre", "weight": 5},
+      {"term": "tos", "weight": 5},
+      {"term": "congestion nasal", "weight": 4},
+      {"term": "dolor de garganta", "weight": 5},
+      {"term": "vomito", "weight": 5},
+      {"term": "diarrea", "weight": 5},
+      {"term": "malestar general", "weight": 4},
+      {"term": "fatiga", "weight": 3},
+      {"term": "cefalea", "weight": 3},
+      {"term": "otitis", "weight": 8},
+      {"term": "erupcion cutanea", "weight": 6}
+    ],
+    "red_flags": [
+      {"term": "fiebre alta", "weight": 12},
+      {"term": "convulsion febril", "weight": 15}
+    ],
+    "negative_keywords": [],
+    "synonyms": {
+      "otitis": ["dolor de oido", "infeccion de oido", "me duele el oido"],
+      "erupcion cutanea": ["sarpullido", "rash", "manchas en la piel", "granos en el cuerpo"],
+      "convulsion febril": ["convulsion con fiebre", "temblores con fiebre"],
+      "fiebre alta": ["temperatura muy alta", "mucha fiebre", "38 grados", "39 grados", "40 grados"],
+      "congestion nasal": ["nariz tapada"],
+      "vomito": ["ganas de vomitar", "he vomitado"],
+      "cefalea": ["dolor de cabeza"]
+    }
   }
 }

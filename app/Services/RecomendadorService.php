@@ -49,6 +49,11 @@ class RecomendadorService
         $normalizedTerms   = $this->matcher->normalizeTerms($gptData['terminos_identificados'] ?? []);
         $topEspecialidades = $this->matcher->scoreSpecialties($normalizedTerms);
 
+        // Pacientes menores de 14 años → priorizar Pediatría sobre Medicina General
+        if ($edad !== null && $edad < 14) {
+            $topEspecialidades = $this->applyPediatricBoost($topEspecialidades);
+        }
+
         // Escalar a "critico" si alguna especialidad activó red_flags
         $nivelUrgencia = $gptData['nivel_urgencia'] ?? 'normal';
         foreach ($topEspecialidades as $esp) {
@@ -291,6 +296,44 @@ PROMPT;
     // ─────────────────────────────────────────────────────────────────────────
     // Haversine: distancia en km entre dos coordenadas
     // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Para pacientes menores de 14 años, sube el score de Pediatría y baja el de
+     * Medicina General, de modo que Pediatría encabece las recomendaciones.
+     * Si Pediatría no alcanzó puntuación por sí sola, se inyecta con un score base.
+     */
+    private function applyPediatricBoost(array $scores): array
+    {
+        $boost    = 25;  // puntos extra a Pediatría
+        $mgMalus  = 15;  // puntos a restar a Medicina General
+        $found    = false;
+
+        foreach ($scores as &$esp) {
+            if ($esp['specialty_key'] === 'pediatria') {
+                $esp['score'] += $boost;
+                $found = true;
+            }
+            if ($esp['specialty_key'] === 'medicina_general') {
+                $esp['score'] = max(0, $esp['score'] - $mgMalus);
+            }
+        }
+        unset($esp);
+
+        // Si Pediatría no apareció en el scoring (puntuación 0), inyectarla
+        if (! $found) {
+            $scores[] = [
+                'specialty_key'  => 'pediatria',
+                'specialty_name' => 'Pediatría',
+                'score'          => $boost,
+                'matched_terms'  => [],
+                'red_flags'      => [],
+                'urgency'        => 'normal',
+            ];
+        }
+
+        usort($scores, static fn ($a, $b) => $b['score'] <=> $a['score']);
+        return array_slice($scores, 0, 3);
+    }
 
     private function haversineKm(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
