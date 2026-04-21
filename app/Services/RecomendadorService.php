@@ -253,7 +253,7 @@ PROMPT;
 
                 $medicos = $candidates
                     ->sortBy('distancia_km')
-                    ->take(5)
+                    ->take(3)
                     ->values();
             } else {
                 $medicos = $query->take(3)->get();

@@ -194,7 +194,7 @@
     </header>
 
     <!-- ══════════ CONTENIDO ══════════ -->
-    <main class="max-w-2xl mx-auto px-4 sm:px-6 pt-6 pb-16">
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-16">
 
         <!-- Hero compacto -->
         <div class="text-center mb-6">
@@ -208,9 +208,9 @@
         </div>
 
         <!-- ══ FORMULARIO ══ -->
-        <div class="card p-4 sm:p-6 mb-5">
+        <div class="max-w-2xl mx-auto">
 
-            <!-- Fila 1: Sexo + Edad juntos -->
+        <div class="card p-4 sm:p-6 mb-5">
             <div class="mb-4">
                 <span class="section-label mb-2">Sexo biológico y edad <span class="normal-case font-normal text-slate-400">(opcional)</span></span>
                 <div class="flex gap-2 mt-2">
@@ -289,6 +289,8 @@
             </div>
         </div>
 
+        </div><!-- /form wrapper -->
+
         <!-- ══ CARGANDO ══ -->
         <div id="estadoCarga" class="hidden text-center py-12">
             <div class="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-cyan-50 border border-cyan-200">
@@ -299,17 +301,37 @@
             <p class="text-slate-700 font-semibold mb-1">Consultando con la IA médica...</p>
             <p class="text-slate-400 text-sm">Esto puede tardar unos segundos</p>
         </div>
+ mt-6">
 
-        <!-- ══ RESULTADOS ══ -->
-        <div id="resultados" class="hidden">
-            <div class="flex items-center gap-2.5 mb-4">
-                <div class="w-1 h-6 rounded-full flex-shrink-0 bg-cyan-500"></div>
-                <h2 class="text-base font-bold text-slate-800">Especialistas recomendados</h2>
+            <!-- Alertas urgencia + resumen IA + términos -->
+            <div id="alertasIa" class="max-w-2xl mx-auto mb-4 space-y-2"></div>
+
+            <!-- Grid: especialidades (izq) + mapa sticky (der) -->
+            <div class="flex flex-col lg:flex-row gap-5 items-start">
+
+                <!-- Columna izquierda: acordeon de especialidades -->
+                <div id="listaResultados" class="flex-1 min-w-0 space-y-2"></div>
+
+                <!-- Columna derecha: mapa sticky -->
+                <div id="mapaCol" class="hidden w-full lg:w-[420px] flex-shrink-0 lg:sticky lg:top-20">
+                    <div class="rounded-2xl overflow-hidden border border-slate-200" style="height:420px;">
+                        <div id="mapaResultados" style="width:100%;height:100%;"></div>
+                    </div>
+                    <p id="mapaLabel" class="text-center text-xs text-slate-400 mt-2"></p>
+                </div>
+            
+
+                <!-- Columna izquierda: acordeon de especialidades -->
+                <div id="listaResultados" class="flex-1 min-w-0 space-y-2"></div>
+
+                <!-- Columna derecha: mapa sticky -->
+                <div id="mapaCol" class="hidden w-full lg:w-[420px] flex-shrink-0 lg:sticky lg:top-20">
+                    <div class="rounded-2xl overflow-hidden border border-slate-200" style="height:420px;">
+                        <div id="mapaResultados" style="width:100%;height:100%;"></div>
+                    </div>
+                    <p id="mapaLabel" class="text-center text-xs text-slate-400 mt-2"></p>
+                </div>
             </div>
-            <div id="listaResultados" class="space-y-3"></div>
-
-            <!-- Mapa de médicos cercanos -->
-            <div id="mapaResultados" class="hidden mt-5 rounded-2xl overflow-hidden border border-slate-200" style="height:340px;"></div>
 
             <p class="text-center text-xs text-slate-400 mt-6 leading-relaxed">
                 Recomendaciones orientativas generadas por IA. Consulta siempre a un profesional.
@@ -448,7 +470,9 @@
     }
 
     // ── Añadir marcadores de médicos al mapa ya visible ──────────────────────
-    function addDoctorMarkers(medicos) {
+    function addDoctorMarkers(medicos, especialidadLabel) {
+        const lbl = document.getElementById('mapaLabel');
+        if (lbl && especialidadLabel) lbl.textContent = `Mostrando: ${especialidadLabel}`;
         if (!_leafletMap || !userLocation) return;
 
         if (!_doctorLayerGroup) {
@@ -567,24 +591,30 @@
         }
     }
 
+    // Datos de especialidades activos (para cambio de tab)
+    let _allEspecialidades = [];
+
     function renderizarResultados(data) {
-        const lista = document.getElementById('listaResultados');
-        lista.innerHTML = '';
+        _allEspecialidades = data.especialidades ?? [];
+
+        // ── Alertas + resumen + términos en zona separada ──────────────────
+        const alertas = document.getElementById('alertasIa');
+        alertas.innerHTML = '';
 
         if (data.nivel_urgencia === 'critico') {
-            lista.innerHTML += `<div class="rounded-xl px-4 py-3 flex gap-3 items-start mb-2 fade-up bg-red-50 border border-red-200">
+            alertas.innerHTML += `<div class="rounded-xl px-4 py-3 flex gap-3 items-start fade-up bg-red-50 border border-red-200">
                 <span class="text-xl flex-shrink-0">🚨</span>
                 <div><p class="font-bold text-red-600 text-sm">Señales de alerta detectadas</p>
                 <p class="text-xs text-red-500 mt-0.5">Los síntomas pueden requerir atención urgente. Considera acudir a urgencias.</p></div></div>`;
         } else if (data.nivel_urgencia === 'urgente') {
-            lista.innerHTML += `<div class="rounded-xl px-4 py-3 flex gap-3 items-start mb-2 fade-up bg-amber-50 border border-amber-200">
+            alertas.innerHTML += `<div class="rounded-xl px-4 py-3 flex gap-3 items-start fade-up bg-amber-50 border border-amber-200">
                 <span class="text-xl flex-shrink-0">⚠️</span>
                 <div><p class="font-bold text-amber-600 text-sm">Atención pronta recomendada</p>
                 <p class="text-xs text-amber-500 mt-0.5">Consulta con un especialista lo antes posible.</p></div></div>`;
         }
 
         if (data.resumen_ia) {
-            lista.innerHTML += `<div class="rounded-xl px-4 py-3 mb-3 flex gap-3 items-start fade-up bg-cyan-50 border border-cyan-200">
+            alertas.innerHTML += `<div class="rounded-xl px-4 py-3 flex gap-3 items-start fade-up bg-cyan-50 border border-cyan-200">
                 <span class="text-lg flex-shrink-0">🩺</span>
                 <p class="text-sm text-slate-600 leading-relaxed"><em>${data.resumen_ia}</em></p></div>`;
         }
@@ -593,13 +623,16 @@
             const chips = data.terminos_extraidos.map(t =>
                 `<span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 border border-cyan-200">${t}</span>`
             ).join(' ');
-            lista.innerHTML += `<div class="flex flex-wrap gap-1.5 mb-4 fade-up">
+            alertas.innerHTML += `<div class="flex flex-wrap gap-1.5 fade-up">
                 <span class="text-xs text-slate-400 self-center mr-1">Detectado:</span>${chips}</div>`;
         }
 
-        const especialidades = data.especialidades ?? [];
-        if (especialidades.length === 0) {
-            lista.innerHTML += `<div class="text-center py-10 fade-up">
+        // ── Sin resultados ─────────────────────────────────────────────────
+        const lista = document.getElementById('listaResultados');
+        lista.innerHTML = '';
+
+        if (_allEspecialidades.length === 0) {
+            lista.innerHTML = `<div class="text-center py-10 fade-up">
                 <div class="text-3xl mb-2">🔍</div>
                 <p class="font-semibold text-slate-700 mb-1">Sin resultados claros</p>
                 <p class="text-sm text-slate-400">Intenta describir con más detalle.</p></div>`;
@@ -607,85 +640,135 @@
             return;
         }
 
-        especialidades.forEach((esp, i) => {
-            const badgeClass = i === 0 ? 'badge-1' : i === 1 ? 'badge-2' : 'badge-3';
-            const posLabel   = i === 0 ? '⭐ Mejor match' : `#${i + 1}`;
+        // ── Mostrar contenedor ANTES de renderizar tarjetas y mapa ─────────
+        document.getElementById('resultados').classList.remove('hidden');
 
-            let medicosHtml = '';
-            const medicos = esp.medicos?.data ?? esp.medicos ?? [];
-            if (medicos.length > 0) {
-                medicosHtml = `<div class="mt-3 pt-3 border-t border-slate-100">
-                    <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Médicos disponibles</p>
-                    <div class="space-y-1.5">`;
-                medicos.forEach((m, mi) => {
-                    const rate = m.calificacion_promedio
-                        ? `<div class="flex items-center gap-1 mt-0.5">
-                            <svg class="w-3 h-3 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                            </svg>
-                            <span class="text-xs text-slate-400">${parseFloat(m.calificacion_promedio).toFixed(1)}</span></div>` : '';
-                    const distBadge = m.distancia_km
-                        ? `<span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              mi === 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
-                          }">${mi === 0 ? '⭐ ' : ''}${parseFloat(m.distancia_km).toFixed(1)} km</span>` : '';
-                    medicosHtml += `<div class="flex items-center gap-2.5 rounded-xl px-3 py-2 bg-slate-50 border border-slate-100">
-                        <div class="doc-avatar"><svg class="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.125a7.5 7.5 0 0114.998 0"/>
-                        </svg></div>
-                        <div class="flex-1 min-w-0"><p class="font-semibold text-slate-700 text-sm truncate">${m.nombre ?? 'Médico'}</p>${rate}</div>
-                        ${distBadge}</div>`;
-                });
-                medicosHtml += '</div></div>';
-            } else {
-                medicosHtml = `<div class="mt-3 pt-3 border-t border-slate-100">
-                    <p class="text-xs italic text-slate-400">No hay médicos registrados en esta especialidad aún.</p></div>`;
-            }
+        // ── Renderizar acordeón ────────────────────────────────────────────
+        _allEspecialidades.forEach((esp, i) => {
+            renderEspCard(esp, i, i === 0);
+        });
 
-            const pct = Math.min(Math.round((esp.puntuacion / 60) * 100), 100);
-            const barColor = esp.urgencia === 'urgente' ? '#ef4444' : i === 0 ? '#0891b2' : '#94a3b8';
+        // ── Mapa: mostrar columna y cargar marcadores top especialidad ──────
+        if (userLocation) {
+            document.getElementById('mapaCol').classList.remove('hidden');
+            initMap(userLocation);
+            const topMedicos = _allEspecialidades[0].medicos?.data ?? _allEspecialidades[0].medicos ?? [];
+            addDoctorMarkers(topMedicos, _allEspecialidades[0].especialidad);
+        }
 
-            lista.innerHTML += `<div class="result-card fade-up">
-                <div class="flex items-start justify-between gap-2 mb-2">
-                    <div><h3 class="font-bold text-slate-800 text-base leading-tight">${esp.especialidad}</h3>
-                    ${esp.red_flags && esp.red_flags.length > 0 ? `<p class="text-red-500 text-xs font-medium mt-0.5">🚨 ${esp.red_flags.join(' · ')}</p>` : ''}</div>
-                    <span class="${badgeClass} inline-block px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0">${posLabel}</span>
+        document.getElementById('resultados').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderEspCard(esp, i, expanded) {
+        const lista = document.getElementById('listaResultados');
+        const badgeClass = i === 0 ? 'badge-1' : i === 1 ? 'badge-2' : 'badge-3';
+        const posLabel   = i === 0 ? '⭐ Mejor match' : `#${i + 1}`;
+        const pct        = Math.min(Math.round((esp.puntuacion / 60) * 100), 100);
+        const barColor   = esp.urgencia === 'urgente' ? '#ef4444' : i === 0 ? '#0891b2' : '#94a3b8';
+
+        // ── Médicos (máx 3) ────────────────────────────────────────────────
+        const medicos = (esp.medicos?.data ?? esp.medicos ?? []).slice(0, 3);
+        let medicosHtml = '';
+        if (medicos.length > 0) {
+            medicosHtml = `<div class="mt-3 pt-3 border-t border-slate-100 space-y-1.5">`;
+            medicos.forEach((m, mi) => {
+                const rate = m.calificacion_promedio
+                    ? `<div class="flex items-center gap-1 mt-0.5">
+                        <svg class="w-3 h-3 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        <span class="text-xs text-slate-400">${parseFloat(m.calificacion_promedio).toFixed(1)}</span></div>` : '';
+                const distBadge = m.distancia_km
+                    ? `<span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          mi === 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                      }">${mi === 0 ? '⭐ ' : ''}${parseFloat(m.distancia_km).toFixed(1)} km</span>` : '';
+                medicosHtml += `<div class="flex items-center gap-2.5 rounded-xl px-3 py-2 bg-slate-50 border border-slate-100">
+                    <div class="doc-avatar"><svg class="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.125a7.5 7.5 0 0114.998 0"/>
+                    </svg></div>
+                    <div class="flex-1 min-w-0"><p class="font-semibold text-slate-700 text-sm truncate">${m.nombre ?? 'Médico'}</p>${rate}</div>
+                    ${distBadge}</div>`;
+            });
+            medicosHtml += `</div>`;
+        } else {
+            medicosHtml = `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-xs italic text-slate-400">No hay médicos registrados aún.</p></div>`;
+        }
+
+        // ── Chevron y estado acordeón ──────────────────────────────────────
+        const chevronOpen   = `<svg class="w-4 h-4 text-slate-400 transition-transform duration-200 rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>`;
+        const chevronClosed = `<svg class="w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>`;
+
+        const card = document.createElement('div');
+        card.className = 'result-card fade-up overflow-hidden';
+        card.dataset.idx = i;
+
+        card.innerHTML = `
+            <!-- Header clicable (siempre visible) -->
+            <button type="button" class="esp-header w-full text-left" data-idx="${i}">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="${badgeClass} inline-block px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0">${posLabel}</span>
+                        <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">${esp.especialidad}</h3>
+                        ${esp.red_flags && esp.red_flags.length > 0 ? `<span class="text-red-500 text-xs font-medium flex-shrink-0">🚨</span>` : ''}
+                    </div>
+                    <span class="chevron flex-shrink-0">${expanded ? chevronOpen : chevronClosed}</span>
                 </div>
-                ${esp.justificacion ? `<p class="text-xs text-slate-500 leading-relaxed mb-3 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">${esp.justificacion}</p>` : ''}
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-slate-400">Afinidad</span>
-                    <div class="flex-1 rounded-full h-1.5 bg-slate-100">
-                        <div style="background:${barColor}; height:6px; border-radius:999px; width:${pct}%; transition:width .6s ease;"></div>
+                <!-- Barra de afinidad (siempre visible) -->
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="text-xs text-slate-400 flex-shrink-0">Afinidad</span>
+                    <div class="flex-1 rounded-full h-1 bg-slate-100">
+                        <div style="background:${barColor}; height:4px; border-radius:999px; width:${pct}%; transition:width .6s ease;"></div>
                     </div>
                     <span class="text-xs font-bold text-slate-500">${esp.puntuacion} pts</span>
                 </div>
-                ${medicosHtml}</div>`;
+            </button>
+            <!-- Cuerpo colapsable -->
+            <div class="esp-body ${expanded ? '' : 'hidden'}">
+                ${esp.justificacion ? `<p class="text-xs text-slate-500 leading-relaxed mt-3 mb-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">${esp.justificacion}</p>` : ''}
+                ${medicosHtml}
+            </div>`;
+
+        lista.appendChild(card);
+    }
+
+    // ── Acordeón: clic en header ───────────────────────────────────────────
+    document.getElementById('listaResultados').addEventListener('click', e => {
+        const btn = e.target.closest('.esp-header');
+        if (!btn) return;
+        const idx  = parseInt(btn.dataset.idx);
+        const card = btn.closest('.result-card');
+        const body = card.querySelector('.esp-body');
+        const alreadyOpen = !body.classList.contains('hidden');
+
+        if (alreadyOpen) return; // ya está abierto, no hacer nada
+
+        // Cerrar todos
+        document.querySelectorAll('.result-card').forEach(c => {
+            c.querySelector('.esp-body').classList.add('hidden');
+            const ch = c.querySelector('.chevron');
+            ch.innerHTML = `<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>`;
         });
 
-        // Mostrar contenedor de resultados ANTES de init del mapa
-        const res = document.getElementById('resultados');
-        res.classList.remove('hidden');
+        // Abrir el seleccionado
+        body.classList.remove('hidden');
+        btn.querySelector('.chevron').innerHTML = `<svg class="w-4 h-4 text-slate-400 rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>`;
 
-        // Ahora el contenedor es visible: inicializar/actualizar mapa y añadir marcadores
-        const topMedicos = especialidades.length > 0
-            ? (especialidades[0].medicos?.data ?? especialidades[0].medicos ?? [])
-            : [];
-        if (userLocation) {
-            document.getElementById('mapaResultados').classList.remove('hidden');
-            initMap(userLocation);
-            addDoctorMarkers(topMedicos);
+        // Actualizar mapa con médicos de esta especialidad
+        if (userLocation && _allEspecialidades[idx]) {
+            const medicos = _allEspecialidades[idx].medicos?.data ?? _allEspecialidades[idx].medicos ?? [];
+            addDoctorMarkers(medicos, _allEspecialidades[idx].especialidad);
         }
-
-        res.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    });
 
     function mostrarCarga(v)     { document.getElementById('estadoCarga').classList.toggle('hidden', !v); }
     function ocultarResultados() {
         document.getElementById('resultados').classList.add('hidden');
         document.getElementById('listaResultados').innerHTML = '';
-        document.getElementById('mapaResultados').classList.add('hidden');
-        // No destruir el mapa, solo limpiar marcadores de médicos para reusar en próxima búsqueda
+        document.getElementById('alertasIa').innerHTML = '';
+        document.getElementById('mapaCol').classList.add('hidden');
         if (_doctorLayerGroup) { _doctorLayerGroup.clearLayers(); }
         if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; _doctorLayerGroup = null; }
+        _allEspecialidades = [];
     }
     function mostrarError(msg)   { document.getElementById('msgErrorText').textContent = msg; document.getElementById('msgError').classList.remove('hidden'); }
     function ocultarError()      { document.getElementById('msgError').classList.add('hidden'); }
