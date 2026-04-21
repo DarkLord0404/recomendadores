@@ -399,12 +399,9 @@
         });
     }
 
-    // ── Inicializar mapa con ubicación del usuario (tiles precargados) ────────
+    // ── Inicializar mapa (llamar solo cuando el contenedor ya es visible) ──────
     function initMap(location) {
         if (!location) return;
-
-        const mapDiv = document.getElementById('mapaResultados');
-        mapDiv.classList.remove('hidden');
 
         if (_leafletMap) {
             if (_doctorLayerGroup) { _doctorLayerGroup.clearLayers(); }
@@ -413,26 +410,27 @@
             return;
         }
 
-        // Forzar reflow ANTES de que Leaflet mida el contenedor
-        // (si no, el div acaba de salir de display:none y mide 0×0)
-        void mapDiv.getBoundingClientRect();
+        // Limites de Cali: solo se piden tiles de esta zona
+        const caliBounds = L.latLngBounds(
+            L.latLng(3.28, -76.60),
+            L.latLng(3.52, -76.44)
+        );
 
         _leafletMap = L.map('mapaResultados', {
-            center:    [location.lat, location.lon],
-            zoom:      13,
-            zoomControl: true,
-            attributionControl: true,
+            center:              [location.lat, location.lon],
+            zoom:                13,
+            maxBounds:           caliBounds,
+            maxBoundsViscosity:  1.0,
+            zoomControl:         true,
+            attributionControl:  true,
         });
 
-        // CartoDB Voyager: tiles ligeros y rápidos, sin API key
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://carto.com">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
             subdomains: 'abcd',
-            maxZoom: 19,
+            maxZoom: 18,
+            bounds:  caliBounds,
         }).addTo(_leafletMap);
-
-        // Corregir tamaño en el próximo frame (por si el layout no se completó)
-        requestAnimationFrame(() => _leafletMap && _leafletMap.invalidateSize());
 
         _doctorLayerGroup = L.layerGroup().addTo(_leafletMap);
 
@@ -444,13 +442,14 @@
         L.marker([location.lat, location.lon], { icon: userIcon })
             .addTo(_leafletMap)
             .bindPopup('<b>📍 Tu ubicación</b>');
+
+        // Corregir tamaño en el siguiente frame
+        requestAnimationFrame(() => _leafletMap && _leafletMap.invalidateSize());
     }
 
-    // ── Añadir marcadores de médicos al mapa ya cargado ──────────────────────
+    // ── Añadir marcadores de médicos al mapa ya visible ──────────────────────
     function addDoctorMarkers(medicos) {
         if (!_leafletMap || !userLocation) return;
-        const hasCoordsDoc = medicos.some(m => m.latitud && m.longitud);
-        if (!hasCoordsDoc) return;
 
         if (!_doctorLayerGroup) {
             _doctorLayerGroup = L.layerGroup().addTo(_leafletMap);
@@ -458,8 +457,10 @@
             _doctorLayerGroup.clearLayers();
         }
 
-        // Asegurarse de que el tamaño es correcto antes de hacer fitBounds
         _leafletMap.invalidateSize();
+
+        const hasCoordsDoc = medicos.some(m => m.latitud && m.longitud);
+        if (!hasCoordsDoc) return;
 
         const bounds = [[userLocation.lat, userLocation.lon]];
 
@@ -534,11 +535,7 @@
         }
         ocultarError(); ocultarResultados(); mostrarCarga(true); bloquearBtn(true);
 
-        // Obtener ubicación (máximo 8s, no bloquea si el usuario deniega)
         userLocation = await getLocation();
-
-        // Arrancar el mapa en cuanto hay ubicación, mientras se espera la IA
-        if (userLocation) initMap(userLocation);
 
         try {
             const body = {
@@ -551,7 +548,6 @@
                 body.latitud  = userLocation.lat;
                 body.longitud = userLocation.lon;
             }
-
             const resp = await fetch('/api/analizar', {
                 method:'POST',
                 headers:{
@@ -665,14 +661,20 @@
                 ${medicosHtml}</div>`;
         });
 
-        // Añadir marcadores de médicos al mapa ya precargado
+        // Mostrar contenedor de resultados ANTES de init del mapa
+        const res = document.getElementById('resultados');
+        res.classList.remove('hidden');
+
+        // Ahora el contenedor es visible: inicializar/actualizar mapa y añadir marcadores
         const topMedicos = especialidades.length > 0
             ? (especialidades[0].medicos?.data ?? especialidades[0].medicos ?? [])
             : [];
-        addDoctorMarkers(topMedicos);
+        if (userLocation) {
+            document.getElementById('mapaResultados').classList.remove('hidden');
+            initMap(userLocation);
+            addDoctorMarkers(topMedicos);
+        }
 
-        const res = document.getElementById('resultados');
-        res.classList.remove('hidden');
         res.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
