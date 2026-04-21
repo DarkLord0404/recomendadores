@@ -383,8 +383,9 @@
     <script>
 
     let sexoSeleccionado = null;
-    let userLocation     = null;  // { lat, lon } o null
-    let _leafletMap      = null;  // instancia Leaflet activa
+    let userLocation     = null;
+    let _leafletMap      = null;
+    let _doctorLayerGroup = null;
 
     // ── Geolocalización del navegador ────────────────────────────────────────
     function getLocation() {
@@ -398,36 +399,61 @@
         });
     }
 
-    // ── Mapa Leaflet ─────────────────────────────────────────────────────────
-    function renderMap(medicos) {
-        if (!userLocation) return;
-        const hasCoordsDoc = medicos.some(m => m.latitud && m.longitud);
-        if (!hasCoordsDoc) return;
+    // ── Inicializar mapa con ubicación del usuario (tiles precargados) ────────
+    function initMap(location) {
+        if (!location) return;
 
         const mapDiv = document.getElementById('mapaResultados');
         mapDiv.classList.remove('hidden');
 
-        if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
+        if (_leafletMap) {
+            // Reusar mapa existente: mover vista y limpiar marcadores de médicos
+            if (_doctorLayerGroup) { _doctorLayerGroup.clearLayers(); }
+            _leafletMap.setView([location.lat, location.lon], 13);
+            return;
+        }
 
-        _leafletMap = L.map('mapaResultados');
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        _leafletMap = L.map('mapaResultados', {
+            center:    [location.lat, location.lon],
+            zoom:      13,
+            zoomControl: true,
+            attributionControl: true,
+        });
+
+        // CartoDB Positron: tiles más rápidos y limpios, sin API key
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+            subdomains: 'abcd',
+            maxZoom: 19,
         }).addTo(_leafletMap);
 
-        const bounds = [];
+        _doctorLayerGroup = L.layerGroup().addTo(_leafletMap);
 
-        // Marcador de usuario (rojo)
+        // Marcador del usuario
         const userIcon = L.divIcon({
             className: '',
             html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.45)"></div>',
             iconSize: [16, 16], iconAnchor: [8, 8]
         });
-        L.marker([userLocation.lat, userLocation.lon], { icon: userIcon })
+        L.marker([location.lat, location.lon], { icon: userIcon })
             .addTo(_leafletMap)
             .bindPopup('<b>📍 Tu ubicación</b>');
-        bounds.push([userLocation.lat, userLocation.lon]);
+    }
 
-        // Marcadores de médicos
+    // ── Añadir marcadores de médicos al mapa ya cargado ──────────────────────
+    function addDoctorMarkers(medicos) {
+        if (!_leafletMap || !userLocation) return;
+        const hasCoordsDoc = medicos.some(m => m.latitud && m.longitud);
+        if (!hasCoordsDoc) return;
+
+        if (!_doctorLayerGroup) {
+            _doctorLayerGroup = L.layerGroup().addTo(_leafletMap);
+        } else {
+            _doctorLayerGroup.clearLayers();
+        }
+
+        const bounds = [[userLocation.lat, userLocation.lon]];
+
         medicos.forEach((m, i) => {
             if (!m.latitud || !m.longitud) return;
             const color   = i === 0 ? '#16a34a' : '#0891b2';
@@ -436,18 +462,16 @@
                 html: `<div style="width:13px;height:13px;background:${color};border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`,
                 iconSize: [13, 13], iconAnchor: [6, 6]
             });
-            const distLabel   = m.distancia_km ? `${parseFloat(m.distancia_km).toFixed(1)} km` : '';
+            const distLabel    = m.distancia_km ? `${parseFloat(m.distancia_km).toFixed(1)} km` : '';
             const closestBadge = i === 0 ? '<br><span style="color:#16a34a;font-weight:700">⭐ Más cercano</span>' : '';
             L.marker([m.latitud, m.longitud], { icon: docIcon })
-                .addTo(_leafletMap)
+                .addTo(_doctorLayerGroup)
                 .bindPopup(`<b>${m.nombre ?? 'Médico'}</b>${closestBadge}<br>${m.direccion ?? ''}<br>${distLabel}`);
             bounds.push([m.latitud, m.longitud]);
         });
 
         if (bounds.length > 1) {
-            _leafletMap.fitBounds(bounds, { padding: [30, 30] });
-        } else {
-            _leafletMap.setView([userLocation.lat, userLocation.lon], 13);
+            _leafletMap.fitBounds(bounds, { padding: [32, 32], maxZoom: 15 });
         }
     }
 
@@ -501,16 +525,30 @@
         }
         ocultarError(); ocultarResultados(); mostrarCarga(true); bloquearBtn(true);
 
-        // Solicitar ubicación al navegador antes del fetch
-        userLocation = await getLocation();
+        // Lanzar geolocalización y API en paralelo
+        const locationPromise = getLocation();
+
+        const body = {
+            sintomas,
+            enfermedades_previas: document.getElementById('enfermedades').value.trim() || null,
+            edad: parseInt(document.getElementById('edad').value) || null,
+            sexo: document.getElementById('sexo').value || null,
+        };
+
+        // Arrancar el mapa con la ubicación en cuanto esté lista (no bloquea la API)
+        locationPromise.then(loc => {
+            userLocation = loc;
+            if (loc) {
+                body.latitud  = loc.lat;
+                body.longitud = loc.lon;
+                initMap(loc);  // precarga tiles mientras la IA responde
+            }
+        });
 
         try {
-            const body = {
-                sintomas,
-                enfermedades_previas: document.getElementById('enfermedades').value.trim() || null,
-                edad: parseInt(document.getElementById('edad').value) || null,
-                sexo: document.getElementById('sexo').value || null,
-            };
+            // Esperar a que llegue la ubicación antes de hacer el fetch
+            // (para poder incluir lat/lon en el body)
+            userLocation = await locationPromise;
             if (userLocation) {
                 body.latitud  = userLocation.lat;
                 body.longitud = userLocation.lon;
@@ -629,11 +667,11 @@
                 ${medicosHtml}</div>`;
         });
 
-        // Renderizar mapa con médicos de la especialidad top
+        // Añadir marcadores de médicos al mapa ya precargado
         const topMedicos = especialidades.length > 0
             ? (especialidades[0].medicos?.data ?? especialidades[0].medicos ?? [])
             : [];
-        renderMap(topMedicos);
+        addDoctorMarkers(topMedicos);
 
         const res = document.getElementById('resultados');
         res.classList.remove('hidden');
@@ -645,7 +683,9 @@
         document.getElementById('resultados').classList.add('hidden');
         document.getElementById('listaResultados').innerHTML = '';
         document.getElementById('mapaResultados').classList.add('hidden');
-        if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
+        // No destruir el mapa, solo limpiar marcadores de médicos para reusar en próxima búsqueda
+        if (_doctorLayerGroup) { _doctorLayerGroup.clearLayers(); }
+        if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; _doctorLayerGroup = null; }
     }
     function mostrarError(msg)   { document.getElementById('msgErrorText').textContent = msg; document.getElementById('msgError').classList.remove('hidden'); }
     function ocultarError()      { document.getElementById('msgError').classList.add('hidden'); }
