@@ -53,6 +53,18 @@
         .chip:hover  { border-color: #0891b2; color: #0e7490; background: #f0fdff; }
         .chip.active { border-color: #0891b2; color: #0e7490; background: #ecfeff; }
 
+        /* ── Chips antecedentes ── */
+        .chip-antec {
+            display: inline-flex; align-items: center; white-space: nowrap;
+            padding: 3px 10px; border-radius: 9999px; font-size: 11.5px;
+            border: 1.5px solid #e2e8f0; cursor: pointer;
+            transition: all .15s ease;
+            background: #f8fafc; color: #64748b;
+            user-select: none;
+        }
+        .chip-antec:hover  { border-color: #059669; color: #047857; background: #f0fdf4; }
+        .chip-antec.active { border-color: #059669; color: #047857; background: #dcfce7; }
+
         /* ── Gender cards ── */
         .gender-card {
             flex: 1; padding: 10px 14px; border-radius: 12px;
@@ -194,90 +206,106 @@
     </header>
 
     <!-- ══════════ CONTENIDO ══════════ -->
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-16">
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-4 pb-16">
 
         <!-- Hero compacto -->
-        <div class="text-center mb-6">
-            <h1 class="hero-title text-3xl sm:text-4xl font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">
+        <div class="text-center mb-4">
+            <h1 class="hero-title text-2xl sm:text-3xl font-extrabold text-slate-800 leading-tight mb-1 tracking-tight">
                 ¿Cómo te sientes
                 <span style="background:linear-gradient(135deg,#0891b2,#059669); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;"> hoy?</span>
             </h1>
-            <p class="text-slate-500 text-sm max-w-md mx-auto">
+            <p class="text-slate-500 text-xs max-w-md mx-auto">
                 Describe tus síntomas y la IA te recomienda el especialista ideal.
             </p>
         </div>
 
         <!-- ══ FORMULARIO ══ -->
-        <div class="max-w-2xl mx-auto">
+        <div class="card p-4 sm:p-5 mb-5">
 
-        <div class="card p-4 sm:p-6 mb-5">
-            <div class="mb-4">
-                <span class="section-label mb-2">Sexo biológico y edad <span class="normal-case font-normal text-slate-400">(opcional)</span></span>
-                <div class="flex gap-2 mt-2">
-                    <button type="button" class="gender-card" id="genderMale" onclick="seleccionarGenero('masculino')">
-                        <span class="g-icon">♂</span>
-                        <span><span class="g-label">Hombre</span><span class="g-sub">Masculino</span></span>
-                    </button>
-                    <button type="button" class="gender-card" id="genderFemale" onclick="seleccionarGenero('femenino')">
-                        <span class="g-icon">♀</span>
-                        <span><span class="g-label">Mujer</span><span class="g-sub">Femenino</span></span>
-                    </button>
-                    <input id="edad" type="number" min="0" max="120" placeholder="Edad" class="field" style="max-width:90px; flex-shrink:0;">
-                </div>
+            <!-- Fila superior: sexo + edad -->
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+                <span class="section-label mr-1 flex-shrink-0">Sexo y edad</span>
+                <button type="button" class="gender-card" id="genderMale" onclick="seleccionarGenero('masculino')">
+                    <span class="g-icon">♂</span>
+                    <span><span class="g-label">Hombre</span></span>
+                </button>
+                <button type="button" class="gender-card" id="genderFemale" onclick="seleccionarGenero('femenino')">
+                    <span class="g-icon">♀</span>
+                    <span><span class="g-label">Mujer</span></span>
+                </button>
+                <input id="edad" type="number" min="0" max="120" placeholder="Edad" class="field" style="max-width:80px; flex-shrink:0;">
                 <input type="hidden" id="sexo" value="">
             </div>
 
-            <div class="divider mb-4"></div>
+            <div class="divider mb-3"></div>
 
-            <!-- Síntomas -->
-            <div class="mb-3">
-                <div class="flex items-center justify-between mb-1.5">
-                    <span class="section-label">Síntomas</span>
-                    <span id="contador" class="text-xs text-slate-400">0 / 500</span>
+            <!-- Grid principal: izquierda síntomas · derecha antecedentes + botón -->
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+
+                <!-- ── Columna izquierda ── -->
+                <div class="flex flex-col gap-2">
+                    <!-- Textarea síntomas -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="section-label">Síntomas</span>
+                            <span id="contador" class="text-xs text-slate-400">0 / 500</span>
+                        </div>
+                        <textarea
+                            id="sintomas"
+                            rows="3"
+                            maxlength="500"
+                            placeholder="Ej: Llevo 3 días con dolor de cabeza, fiebre de 38°C y tos seca..."
+                            class="field resize-none"
+                        ></textarea>
+                    </div>
+
+                    <!-- Chips síntomas -->
+                    <div>
+                        <span class="section-label mb-1.5">Síntomas frecuentes</span>
+                        <div id="chips" class="chips-scroll mt-1.5">
+                            @foreach ([
+                                ['🤒','Fiebre'],['🤕','Dolor de cabeza'],['🤧','Tos'],
+                                ['😮‍💨','Falta de aire'],['🤢','Náuseas'],['💢','Dolor de pecho'],
+                                ['🦴','Dolor muscular'],['😴','Cansancio'],['🫃','Dolor abdominal'],
+                                ['💊','Mareos'],['🌡️','Escalofríos'],['😔','Tristeza / ansiedad'],
+                            ] as [$icon, $label])
+                            <button type="button" class="chip" data-sintoma="{{ $label }}">{{ $icon }} {{ $label }}</button>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
-                <textarea
-                    id="sintomas"
-                    rows="4"
-                    maxlength="500"
-                    placeholder="Ej: Llevo 3 días con dolor de cabeza, fiebre de 38°C y tos seca..."
-                    class="field resize-none"
-                ></textarea>
-            </div>
 
-            <!-- Chips síntomas (scroll horizontal en móvil) -->
-            <div class="mb-4">
-                <span class="section-label mb-2">Síntomas frecuentes</span>
-                <div id="chips" class="chips-scroll mt-2">
-                    @foreach ([
-                        ['🤒','Fiebre'],['🤕','Dolor de cabeza'],['🤧','Tos'],
-                        ['😮‍💨','Falta de aire'],['🤢','Náuseas'],['💢','Dolor de pecho'],
-                        ['🦴','Dolor muscular'],['😴','Cansancio'],['🫃','Dolor abdominal'],
-                        ['💊','Mareos'],['🌡️','Escalofríos'],['😔','Tristeza / ansiedad'],
-                    ] as [$icon, $label])
-                    <button type="button" class="chip" data-sintoma="{{ $label }}">{{ $icon }} {{ $label }}</button>
-                    @endforeach
+                <!-- ── Columna derecha ── -->
+                <div class="flex flex-col justify-between gap-3">
+                    <!-- Antecedentes -->
+                    <div>
+                        <span class="section-label mb-1.5">Antecedentes <span class="normal-case font-normal text-slate-400">(opcional)</span></span>
+                        <input id="enfermedades" type="text" placeholder="Ej: Diabetes, hipertensión..." class="field mt-1.5 mb-2">
+                        <!-- Chips antecedentes -->
+                        <div id="chipsAntec" class="flex flex-wrap gap-1.5">
+                            @foreach ([
+                                'Diabetes','Hipertensión','Asma','Artritis',
+                                'Hipotiroidismo','Gastritis','Migraña','Depresión',
+                                'Ansiedad','Colesterol alto','Obesidad','EPOC',
+                            ] as $ant)
+                            <button type="button" class="chip-antec" data-antec="{{ $ant }}">{{ $ant }}</button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Botón + limpiar -->
+                    <div class="flex flex-col gap-1.5">
+                        <button id="btnBuscar" onclick="buscarMedico()" class="btn-primary w-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+                            </svg>
+                            Buscar mi médico ideal
+                        </button>
+                        <button type="button" onclick="limpiar()" class="text-xs text-slate-400 hover:text-slate-600 transition-colors py-1 text-center">
+                            Limpiar formulario
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            <div class="divider mb-4"></div>
-
-            <!-- Antecedentes -->
-            <div class="mb-4">
-                <span class="section-label mb-1.5">Antecedentes médicos <span class="normal-case font-normal text-slate-400">(opcional)</span></span>
-                <input id="enfermedades" type="text" placeholder="Ej: Diabetes, hipertensión, asma..." class="field mt-1.5">
-            </div>
-
-            <!-- Botón -->
-            <div class="flex flex-col sm:flex-row items-center gap-2">
-                <button id="btnBuscar" onclick="buscarMedico()" class="btn-primary w-full sm:w-auto">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-                    </svg>
-                    Buscar mi médico ideal
-                </button>
-                <button type="button" onclick="limpiar()" class="text-sm text-slate-400 hover:text-slate-600 transition-colors px-2 py-2 self-center">
-                    Limpiar
-                </button>
             </div>
 
             <!-- Error -->
@@ -288,8 +316,6 @@
                 <span id="msgErrorText"></span>
             </div>
         </div>
-
-        </div><!-- /form wrapper -->
 
         <!-- ══ CARGANDO ══ -->
         <div id="estadoCarga" class="hidden text-center py-12">
@@ -525,6 +551,22 @@
         });
     });
 
+    document.querySelectorAll('.chip-antec').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const input = document.getElementById('enfermedades');
+            const val   = chip.dataset.antec;
+            chip.classList.toggle('active');
+            const current = input.value.split(',').map(x => x.trim()).filter(Boolean);
+            if (chip.classList.contains('active')) {
+                if (!current.includes(val)) current.push(val);
+            } else {
+                const idx = current.indexOf(val);
+                if (idx > -1) current.splice(idx, 1);
+            }
+            input.value = current.join(', ');
+        });
+    });
+
     const ta = document.getElementById('sintomas');
     ta.addEventListener('input', actualizarContador);
     function actualizarContador() {
@@ -537,7 +579,7 @@
         sexoSeleccionado = null;
         document.getElementById('genderMale').classList.remove('selected-male','selected-female');
         document.getElementById('genderFemale').classList.remove('selected-male','selected-female');
-        document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.chip.active, .chip-antec.active').forEach(c => c.classList.remove('active'));
         ocultarResultados(); ocultarError();
     }
 
