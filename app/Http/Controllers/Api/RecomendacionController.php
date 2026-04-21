@@ -33,6 +33,8 @@ class RecomendacionController extends Controller
             'enfermedades_previas' => ['nullable', 'string', 'max:500'],
             'edad'                 => ['nullable', 'integer', 'min:0', 'max:120'],
             'sexo'                 => ['nullable', 'string', 'in:masculino,femenino'],
+            'latitud'              => ['nullable', 'numeric', 'between:-90,90'],
+            'longitud'             => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $resultado = $this->recomendadorService->analizar(
@@ -40,6 +42,8 @@ class RecomendacionController extends Controller
             enfermedadesPrevias:  $validated['enfermedades_previas'] ?? null,
             edad:                 $validated['edad'] ?? null,
             sexo:                 $validated['sexo'] ?? null,
+            latitud:              isset($validated['latitud'])  ? (float) $validated['latitud']  : null,
+            longitud:             isset($validated['longitud']) ? (float) $validated['longitud'] : null,
         );
 
         return response()->json($resultado);

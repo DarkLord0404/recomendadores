@@ -19,6 +19,10 @@ class MedicoResource extends JsonResource
             'bio'                  => $this->bio,
             'foto_url'             => $this->foto_url,
             'disponible'           => $this->disponible,
+            'latitud'              => $this->latitud,
+            'longitud'             => $this->longitud,
+            'direccion'            => $this->direccion,
+            'distancia_km'         => isset($this->resource->distancia_km) ? round($this->resource->distancia_km, 2) : null,
         ];
     }
 }

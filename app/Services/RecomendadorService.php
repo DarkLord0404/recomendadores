@@ -40,7 +40,9 @@ class RecomendadorService
         string  $sintomas,
         ?string $enfermedadesPrevias = null,
         ?int    $edad = null,
-        ?string $sexo = null
+        ?string $sexo = null,
+        ?float  $latitud  = null,
+        ?float  $longitud = null
     ): array {
         $gptData           = $this->extraerTerminosViaGPT($sintomas, $enfermedadesPrevias, $edad, $sexo);
         $normalizedTerms   = $this->matcher->normalizeTerms($gptData['terminos_identificados'] ?? []);
@@ -55,7 +57,7 @@ class RecomendadorService
             }
         }
 
-        $especialidadesResult = $this->buildEspecialidadesResult($topEspecialidades);
+        $especialidadesResult = $this->buildEspecialidadesResult($topEspecialidades, $latitud, $longitud);
 
         // Quitar clave interna antes de devolver
         $output = array_map(static function ($e) {
@@ -220,19 +222,42 @@ PROMPT;
     /**
      * Para cada especialidad puntuada, busca médicos en la BD y arma la respuesta.
      */
-    private function buildEspecialidadesResult(array $topEspecialidades): array
+    private function buildEspecialidadesResult(array $topEspecialidades, ?float $latitud = null, ?float $longitud = null): array
     {
         $results = [];
+        $hasGeo  = $latitud !== null && $longitud !== null;
 
         foreach ($topEspecialidades as $idx => $esp) {
-            $medicos = Medico::with('user', 'especialidad')
+            $query = Medico::with('user', 'especialidad')
                 ->whereHas('especialidad', fn ($q) =>
                     $q->where('nombre', $esp['specialty_name'])
                 )
                 ->where('disponible', true)
-                ->orderByDesc('calificacion_promedio')
-                ->take(3)
-                ->get();
+                ->orderByDesc('calificacion_promedio');
+
+            if ($hasGeo) {
+                // Fetch more candidates so we can sort by distance
+                $candidates = $query->take(30)->get();
+
+                foreach ($candidates as $medico) {
+                    if ($medico->latitud !== null && $medico->longitud !== null) {
+                        $medico->distancia_km = $this->haversineKm(
+                            $latitud, $longitud,
+                            (float) $medico->latitud,
+                            (float) $medico->longitud
+                        );
+                    } else {
+                        $medico->distancia_km = PHP_FLOAT_MAX;
+                    }
+                }
+
+                $medicos = $candidates
+                    ->sortBy('distancia_km')
+                    ->take(5)
+                    ->values();
+            } else {
+                $medicos = $query->take(3)->get();
+            }
 
             $justificacion = $this->buildJustificacion(
                 $esp['specialty_name'],
@@ -259,6 +284,20 @@ PROMPT;
     /**
      * Genera una justificación legible de por qué se recomienda la especialidad.
      */
+    // ─────────────────────────────────────────────────────────────────────────
+    // Haversine: distancia en km entre dos coordenadas
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function haversineKm(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $R    = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a    = sin($dLat / 2) ** 2
+              + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+        return $R * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
     private function buildJustificacion(
         string $especialidad,
         array  $matched,

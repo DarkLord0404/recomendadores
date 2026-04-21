@@ -18,11 +18,16 @@ class Medico extends Model
         'total_consultas',
         'disponible',
         'foto_url',
+        'latitud',
+        'longitud',
+        'direccion',
     ];
 
     protected $casts = [
         'disponible'           => 'boolean',
         'calificacion_promedio'=> 'decimal:2',
+        'latitud'              => 'float',
+        'longitud'             => 'float',
     ];
 
     public function user(): BelongsTo

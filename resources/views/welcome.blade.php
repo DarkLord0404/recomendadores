@@ -15,6 +15,9 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+
     <style>
         * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
 
@@ -160,6 +163,10 @@
             .form-grid  { grid-template-columns: 1fr !important; }
             .btn-primary { width: 100%; justify-content: center; }
         }
+
+        /* ── Leaflet map ── */
+        #mapaResultados { z-index: 0; }
+        .leaflet-popup-content { font-size: 13px; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -300,6 +307,10 @@
                 <h2 class="text-base font-bold text-slate-800">Especialistas recomendados</h2>
             </div>
             <div id="listaResultados" class="space-y-3"></div>
+
+            <!-- Mapa de médicos cercanos -->
+            <div id="mapaResultados" class="hidden mt-5 rounded-2xl overflow-hidden border border-slate-200" style="height:340px;"></div>
+
             <p class="text-center text-xs text-slate-400 mt-6 leading-relaxed">
                 Recomendaciones orientativas generadas por IA. Consulta siempre a un profesional.
             </p>
@@ -366,9 +377,79 @@
     </footer>
 
     <!-- ══════════ SCRIPTS ══════════ -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
     <script>
 
     let sexoSeleccionado = null;
+    let userLocation     = null;  // { lat, lon } o null
+    let _leafletMap      = null;  // instancia Leaflet activa
+
+    // ── Geolocalización del navegador ────────────────────────────────────────
+    function getLocation() {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) { resolve(null); return; }
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+                ()  => resolve(null),
+                { timeout: 8000, maximumAge: 300000 }
+            );
+        });
+    }
+
+    // ── Mapa Leaflet ─────────────────────────────────────────────────────────
+    function renderMap(medicos) {
+        if (!userLocation) return;
+        const hasCoordsDoc = medicos.some(m => m.latitud && m.longitud);
+        if (!hasCoordsDoc) return;
+
+        const mapDiv = document.getElementById('mapaResultados');
+        mapDiv.classList.remove('hidden');
+
+        if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
+
+        _leafletMap = L.map('mapaResultados');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(_leafletMap);
+
+        const bounds = [];
+
+        // Marcador de usuario (rojo)
+        const userIcon = L.divIcon({
+            className: '',
+            html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.45)"></div>',
+            iconSize: [16, 16], iconAnchor: [8, 8]
+        });
+        L.marker([userLocation.lat, userLocation.lon], { icon: userIcon })
+            .addTo(_leafletMap)
+            .bindPopup('<b>📍 Tu ubicación</b>');
+        bounds.push([userLocation.lat, userLocation.lon]);
+
+        // Marcadores de médicos
+        medicos.forEach((m, i) => {
+            if (!m.latitud || !m.longitud) return;
+            const color   = i === 0 ? '#16a34a' : '#0891b2';
+            const docIcon = L.divIcon({
+                className: '',
+                html: `<div style="width:13px;height:13px;background:${color};border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`,
+                iconSize: [13, 13], iconAnchor: [6, 6]
+            });
+            const distLabel   = m.distancia_km ? `${parseFloat(m.distancia_km).toFixed(1)} km` : '';
+            const closestBadge = i === 0 ? '<br><span style="color:#16a34a;font-weight:700">⭐ Más cercano</span>' : '';
+            L.marker([m.latitud, m.longitud], { icon: docIcon })
+                .addTo(_leafletMap)
+                .bindPopup(`<b>${m.nombre ?? 'Médico'}</b>${closestBadge}<br>${m.direccion ?? ''}<br>${distLabel}`);
+            bounds.push([m.latitud, m.longitud]);
+        });
+
+        if (bounds.length > 1) {
+            _leafletMap.fitBounds(bounds, { padding: [30, 30] });
+        } else {
+            _leafletMap.setView([userLocation.lat, userLocation.lon], 13);
+        }
+    }
 
     function seleccionarGenero(sexo) {
         sexoSeleccionado = sexo;
@@ -419,7 +500,22 @@
             return;
         }
         ocultarError(); ocultarResultados(); mostrarCarga(true); bloquearBtn(true);
+
+        // Solicitar ubicación al navegador antes del fetch
+        userLocation = await getLocation();
+
         try {
+            const body = {
+                sintomas,
+                enfermedades_previas: document.getElementById('enfermedades').value.trim() || null,
+                edad: parseInt(document.getElementById('edad').value) || null,
+                sexo: document.getElementById('sexo').value || null,
+            };
+            if (userLocation) {
+                body.latitud  = userLocation.lat;
+                body.longitud = userLocation.lon;
+            }
+
             const resp = await fetch('/api/analizar', {
                 method:'POST',
                 headers:{
@@ -427,12 +523,7 @@
                     'Accept':'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 },
-                body: JSON.stringify({
-                    sintomas,
-                    enfermedades_previas: document.getElementById('enfermedades').value.trim() || null,
-                    edad: parseInt(document.getElementById('edad').value) || null,
-                    sexo: document.getElementById('sexo').value || null,
-                }),
+                body: JSON.stringify(body),
             });
             const data = await resp.json();
             if (!resp.ok) { mostrarError(data.message || 'Error al procesar la solicitud.'); return; }
@@ -494,18 +585,23 @@
                 medicosHtml = `<div class="mt-3 pt-3 border-t border-slate-100">
                     <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Médicos disponibles</p>
                     <div class="space-y-1.5">`;
-                medicos.forEach(m => {
+                medicos.forEach((m, mi) => {
                     const rate = m.calificacion_promedio
                         ? `<div class="flex items-center gap-1 mt-0.5">
                             <svg class="w-3 h-3 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                             </svg>
                             <span class="text-xs text-slate-400">${parseFloat(m.calificacion_promedio).toFixed(1)}</span></div>` : '';
+                    const distBadge = m.distancia_km
+                        ? `<span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              mi === 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                          }">${mi === 0 ? '⭐ ' : ''}${parseFloat(m.distancia_km).toFixed(1)} km</span>` : '';
                     medicosHtml += `<div class="flex items-center gap-2.5 rounded-xl px-3 py-2 bg-slate-50 border border-slate-100">
                         <div class="doc-avatar"><svg class="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.125a7.5 7.5 0 0114.998 0"/>
                         </svg></div>
-                        <div><p class="font-semibold text-slate-700 text-sm">Dr. ${m.nombre ?? 'Médico'}</p>${rate}</div></div>`;
+                        <div class="flex-1 min-w-0"><p class="font-semibold text-slate-700 text-sm truncate">${m.nombre ?? 'Médico'}</p>${rate}</div>
+                        ${distBadge}</div>`;
                 });
                 medicosHtml += '</div></div>';
             } else {
@@ -533,13 +629,24 @@
                 ${medicosHtml}</div>`;
         });
 
+        // Renderizar mapa con médicos de la especialidad top
+        const topMedicos = especialidades.length > 0
+            ? (especialidades[0].medicos?.data ?? especialidades[0].medicos ?? [])
+            : [];
+        renderMap(topMedicos);
+
         const res = document.getElementById('resultados');
         res.classList.remove('hidden');
         res.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function mostrarCarga(v)     { document.getElementById('estadoCarga').classList.toggle('hidden', !v); }
-    function ocultarResultados() { document.getElementById('resultados').classList.add('hidden'); document.getElementById('listaResultados').innerHTML = ''; }
+    function ocultarResultados() {
+        document.getElementById('resultados').classList.add('hidden');
+        document.getElementById('listaResultados').innerHTML = '';
+        document.getElementById('mapaResultados').classList.add('hidden');
+        if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
+    }
     function mostrarError(msg)   { document.getElementById('msgErrorText').textContent = msg; document.getElementById('msgError').classList.remove('hidden'); }
     function ocultarError()      { document.getElementById('msgError').classList.add('hidden'); }
     function bloquearBtn(v) {
