@@ -35,6 +35,7 @@ class RecomendacionController extends Controller
             'sexo'                 => ['nullable', 'string', 'in:masculino,femenino'],
             'latitud'              => ['nullable', 'numeric', 'between:-90,90'],
             'longitud'             => ['nullable', 'numeric', 'between:-180,180'],
+            'tiempo_evolucion'     => ['nullable', 'string', 'max:50'],
         ]);
 
         $resultado = $this->recomendadorService->analizar(
@@ -44,6 +45,7 @@ class RecomendacionController extends Controller
             sexo:                 $validated['sexo'] ?? null,
             latitud:              isset($validated['latitud'])  ? (float) $validated['latitud']  : null,
             longitud:             isset($validated['longitud']) ? (float) $validated['longitud'] : null,
+            tiempoEvolucion:      $validated['tiempo_evolucion'] ?? null,
         );
 
         return response()->json($resultado);

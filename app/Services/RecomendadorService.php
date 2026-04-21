@@ -42,9 +42,10 @@ class RecomendadorService
         ?int    $edad = null,
         ?string $sexo = null,
         ?float  $latitud  = null,
-        ?float  $longitud = null
+        ?float  $longitud = null,
+        ?string $tiempoEvolucion = null
     ): array {
-        $gptData           = $this->extraerTerminosViaGPT($sintomas, $enfermedadesPrevias, $edad, $sexo);
+        $gptData           = $this->extraerTerminosViaGPT($sintomas, $enfermedadesPrevias, $edad, $sexo, $tiempoEvolucion);
         $normalizedTerms   = $this->matcher->normalizeTerms($gptData['terminos_identificados'] ?? []);
         $topEspecialidades = $this->matcher->scoreSpecialties($normalizedTerms);
 
@@ -137,7 +138,7 @@ class RecomendadorService
      * de términos reconocidos del JSON.
      * GPT devuelve SOLO términos que estén en esa lista.
      */
-    private function extraerTerminosViaGPT(string $sintomas, ?string $previas, ?int $edad = null, ?string $sexo = null): array
+    private function extraerTerminosViaGPT(string $sintomas, ?string $previas, ?int $edad = null, ?string $sexo = null, ?string $tiempoEvolucion = null): array
     {
         $termsList = $this->matcher->buildTermsList();
         $termsStr  = implode(', ', $termsList);
@@ -151,6 +152,9 @@ class RecomendadorService
         }
         if ($sexo !== null) {
             $userContent .= "\nSexo biológico: {$sexo}";
+        }
+        if ($tiempoEvolucion !== null) {
+            $userContent .= "\nTiempo de evolución de los síntomas: {$tiempoEvolucion}";
         }
 
         $systemPrompt = <<<'SYS'
