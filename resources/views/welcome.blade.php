@@ -301,25 +301,15 @@
             <p class="text-slate-700 font-semibold mb-1">Consultando con la IA médica...</p>
             <p class="text-slate-400 text-sm">Esto puede tardar unos segundos</p>
         </div>
- mt-6">
+
+        <!-- ══ RESULTADOS ══ -->
+        <div id="resultados" class="hidden mt-6">
 
             <!-- Alertas urgencia + resumen IA + términos -->
             <div id="alertasIa" class="max-w-2xl mx-auto mb-4 space-y-2"></div>
 
             <!-- Grid: especialidades (izq) + mapa sticky (der) -->
             <div class="flex flex-col lg:flex-row gap-5 items-start">
-
-                <!-- Columna izquierda: acordeon de especialidades -->
-                <div id="listaResultados" class="flex-1 min-w-0 space-y-2"></div>
-
-                <!-- Columna derecha: mapa sticky -->
-                <div id="mapaCol" class="hidden w-full lg:w-[420px] flex-shrink-0 lg:sticky lg:top-20">
-                    <div class="rounded-2xl overflow-hidden border border-slate-200" style="height:420px;">
-                        <div id="mapaResultados" style="width:100%;height:100%;"></div>
-                    </div>
-                    <p id="mapaLabel" class="text-center text-xs text-slate-400 mt-2"></p>
-                </div>
-            
 
                 <!-- Columna izquierda: acordeon de especialidades -->
                 <div id="listaResultados" class="flex-1 min-w-0 space-y-2"></div>
