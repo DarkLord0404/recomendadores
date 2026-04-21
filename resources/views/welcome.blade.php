@@ -407,11 +407,15 @@
         mapDiv.classList.remove('hidden');
 
         if (_leafletMap) {
-            // Reusar mapa existente: mover vista y limpiar marcadores de médicos
             if (_doctorLayerGroup) { _doctorLayerGroup.clearLayers(); }
+            _leafletMap.invalidateSize();
             _leafletMap.setView([location.lat, location.lon], 13);
             return;
         }
+
+        // Forzar reflow ANTES de que Leaflet mida el contenedor
+        // (si no, el div acaba de salir de display:none y mide 0×0)
+        void mapDiv.getBoundingClientRect();
 
         _leafletMap = L.map('mapaResultados', {
             center:    [location.lat, location.lon],
@@ -420,16 +424,18 @@
             attributionControl: true,
         });
 
-        // CartoDB Positron: tiles más rápidos y limpios, sin API key
+        // CartoDB Voyager: tiles ligeros y rápidos, sin API key
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://carto.com">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
             subdomains: 'abcd',
             maxZoom: 19,
         }).addTo(_leafletMap);
 
+        // Corregir tamaño en el próximo frame (por si el layout no se completó)
+        requestAnimationFrame(() => _leafletMap && _leafletMap.invalidateSize());
+
         _doctorLayerGroup = L.layerGroup().addTo(_leafletMap);
 
-        // Marcador del usuario
         const userIcon = L.divIcon({
             className: '',
             html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.45)"></div>',
@@ -451,6 +457,9 @@
         } else {
             _doctorLayerGroup.clearLayers();
         }
+
+        // Asegurarse de que el tamaño es correcto antes de hacer fitBounds
+        _leafletMap.invalidateSize();
 
         const bounds = [[userLocation.lat, userLocation.lon]];
 
@@ -525,30 +534,19 @@
         }
         ocultarError(); ocultarResultados(); mostrarCarga(true); bloquearBtn(true);
 
-        // Lanzar geolocalización y API en paralelo
-        const locationPromise = getLocation();
+        // Obtener ubicación (máximo 8s, no bloquea si el usuario deniega)
+        userLocation = await getLocation();
 
-        const body = {
-            sintomas,
-            enfermedades_previas: document.getElementById('enfermedades').value.trim() || null,
-            edad: parseInt(document.getElementById('edad').value) || null,
-            sexo: document.getElementById('sexo').value || null,
-        };
-
-        // Arrancar el mapa con la ubicación en cuanto esté lista (no bloquea la API)
-        locationPromise.then(loc => {
-            userLocation = loc;
-            if (loc) {
-                body.latitud  = loc.lat;
-                body.longitud = loc.lon;
-                initMap(loc);  // precarga tiles mientras la IA responde
-            }
-        });
+        // Arrancar el mapa en cuanto hay ubicación, mientras se espera la IA
+        if (userLocation) initMap(userLocation);
 
         try {
-            // Esperar a que llegue la ubicación antes de hacer el fetch
-            // (para poder incluir lat/lon en el body)
-            userLocation = await locationPromise;
+            const body = {
+                sintomas,
+                enfermedades_previas: document.getElementById('enfermedades').value.trim() || null,
+                edad: parseInt(document.getElementById('edad').value) || null,
+                sexo: document.getElementById('sexo').value || null,
+            };
             if (userLocation) {
                 body.latitud  = userLocation.lat;
                 body.longitud = userLocation.lon;
