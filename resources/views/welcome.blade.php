@@ -130,9 +130,14 @@
         }
 
         /* ── Urgencia badges ── */
-        .urg-normal  { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
-        .urg-urgente { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
-        .urg-critico { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+        .urg-normal     { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+        .urg-urgente    { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+        .urg-critico    { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+        .urg-emergencia { background:#7f1d1d; color:#fef2f2; border:1px solid #dc2626; }
+
+        /* ── Emergency banner ── */
+        @keyframes emergPulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(220,38,38,.4);} 50%{opacity:.92;box-shadow:0 0 0 12px rgba(220,38,38,0);} }
+        .emergency-banner { border-radius:16px; background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 100%); color:#fff; padding:28px 24px; text-align:center; animation:emergPulse 2s ease infinite; }
 
         /* ── Position badges ── */
         .badge-1 { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
@@ -652,6 +657,36 @@
     function renderizarResultados(data) {
         _allEsp = data.especialidades || [];
         const urg = data.nivel_urgencia || 'normal';
+
+        // ── EMERGENCIA: banner a pantalla completa, sin listado de médicos ──
+        if (urg === 'emergencia') {
+            const iconSirena = '<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-4 mx-auto opacity-90" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5"/></svg>';
+            document.getElementById('bloqueResumen').innerHTML =
+                '<div class="emergency-banner fade-up">'
+                + iconSirena
+                + '<p class="text-xs font-bold uppercase tracking-widest mb-2 opacity-75">Alerta de emergencia médica</p>'
+                + '<h2 class="text-xl font-extrabold mb-3 leading-snug">' + (data.condicion_detectada || 'Emergencia detectada') + '</h2>'
+                + '<p class="text-sm opacity-90 mb-5 leading-relaxed max-w-md mx-auto">' + (data.mensaje_emergencia || '') + '</p>'
+                + '<div class="flex flex-col sm:flex-row gap-3 justify-center">'
+                + '<a href="tel:123" class="inline-flex items-center justify-center gap-2 bg-white text-red-700 font-bold text-base px-6 py-3 rounded-xl shadow-lg hover:bg-red-50 transition-colors">'
+                + '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>'
+                + 'Llamar al 123'
+                + '</a>'
+                + '<a href="https://maps.google.com/?q=urgencias+hospital+cercano" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 bg-red-800 text-white font-semibold text-sm px-5 py-3 rounded-xl hover:bg-red-900 transition-colors">'
+                + '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>'
+                + 'Ver urgencias cercanas'
+                + '</a>'
+                + '</div>'
+                + '<p class="text-xs opacity-60 mt-5">No esperes. Ve a urgencias o llama al número de emergencias.</p>'
+                + '</div>';
+            document.getElementById('encabezadoEspecialidades').classList.add('hidden');
+            document.getElementById('listaResultados').innerHTML = '';
+            document.getElementById('mapaCol').classList.add('hidden');
+            document.getElementById('resultados').classList.remove('hidden');
+            document.getElementById('resultados').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
         const U   = URGENCIA[urg] || URGENCIA.normal;
 
         let html = '';

@@ -25,7 +25,8 @@ class RecomendadorService
     private const GPT_MODEL = 'gpt-4o-mini';
 
     public function __construct(
-        private readonly KeywordMatcherService $matcher
+        private readonly KeywordMatcherService    $matcher,
+        private readonly EmergencyDetectorService $emergency,
     ) {}
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -45,6 +46,19 @@ class RecomendadorService
         ?float  $longitud = null,
         ?string $tiempoEvolucion = null
     ): array {
+        // ── Detección de emergencias (sin GPT, respuesta inmediata) ───
+        $emergencia = $this->emergency->detectar($sintomas, $enfermedadesPrevias);
+        if ($emergencia !== null) {
+            return [
+                'nivel_urgencia'      => 'emergencia',
+                'condicion_detectada' => $emergencia['condicion'],
+                'mensaje_emergencia'  => $emergencia['mensaje'],
+                'resumen_ia'          => '',
+                'terminos_extraidos'  => [],
+                'especialidades'      => [],
+            ];
+        }
+
         $gptData           = $this->extraerTerminosViaGPT($sintomas, $enfermedadesPrevias, $edad, $sexo, $tiempoEvolucion);
         $normalizedTerms   = $this->matcher->normalizeTerms($gptData['terminos_identificados'] ?? []);
         $topEspecialidades = $this->matcher->scoreSpecialties($normalizedTerms);
