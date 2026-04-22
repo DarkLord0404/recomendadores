@@ -49,6 +49,15 @@ class RecomendadorService
         $normalizedTerms   = $this->matcher->normalizeTerms($gptData['terminos_identificados'] ?? []);
         $topEspecialidades = $this->matcher->scoreSpecialties($normalizedTerms);
 
+        // Pacientes >= 18 años → excluir Pediatría (pediatras no atienden adultos)
+        if ($edad !== null && $edad >= 18) {
+            $topEspecialidades = array_values(
+                array_filter($topEspecialidades, static fn ($e) => $e['specialty_key'] !== 'pediatria')
+            );
+            // Restaurar top 3 tras el filtro
+            $topEspecialidades = array_slice($topEspecialidades, 0, 3);
+        }
+
         // Pacientes menores de 14 años → priorizar Pediatría sobre Medicina General
         if ($edad !== null && $edad < 14) {
             $topEspecialidades = $this->applyPediatricBoost($topEspecialidades);
