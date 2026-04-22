@@ -21,14 +21,20 @@ Paciente describe síntomas (texto libre)
 ┌──────────────────────────────────────────────────────┐
 │                  RecomendadorService                  │
 │                                                      │
+│  0. EmergencyDetectorService → pattern matching      │
+│     (sin GPT) sobre 11 condiciones de emergencia.    │
+│     Si detecta → respuesta inmediata "emergencia"    │
+│     ↓ solo si no hay emergencia ↓                    │
+│                                                      │
 │  1. GPT-4o-mini → extrae términos médicos            │
 │     (vocabulario controlado + contexto clínico)      │
 │                                                      │
 │  2. KeywordMatcherService → puntúa las 12            │
 │     especialidades por score ponderado               │
 │                                                      │
-│  3. Ajuste demográfico → si edad < 14 años,          │
-│     aplica boost de Pediatría                        │
+│  3. Ajuste demográfico:                              │
+│     • edad >= 18 → excluye Pediatría del top 3       │
+│     • edad < 14  → boost +25 pts a Pediatría         │
 │                                                      │
 │  4. MySQL → busca hasta 30 candidatos por            │
 │     especialidad ganadora                            │
@@ -39,13 +45,55 @@ Paciente describe síntomas (texto libre)
 [Respuesta JSON] Top 3 opciones médicas + 3 profesionales c/u
         ↓
 [Frontend Blade + Leaflet.js] Acordeón + Mapa interactivo
+                     — o —
+[Frontend] Banner rojo de emergencia + botón 123 (si emergencia)
 ```
 
 ---
 
 ## El motor recomendador: cómo funciona paso a paso
 
-Este es el núcleo del trabajo. El proceso de recomendación combina tres mecanismos distintos que trabajan en secuencia.
+Este es el núcleo del trabajo. El proceso de recomendación combina cuatro mecanismos que trabajan en secuencia.
+
+---
+
+### Paso 0 — Detección de emergencias (EmergencyDetectorService)
+
+**Archivo:** `app/Services/EmergencyDetectorService.php`
+
+Antes de invocar a GPT, el texto de síntomas pasa por un detector de patrones en PHP puro — sin costo de API y con latencia mínima. Si detecta una combinación que sugiere una emergencia médica, el flujo se **cortocircuita**: se devuelve una respuesta inmediata con `nivel_urgencia: emergencia` y se muestra en el frontend un banner rojo pulsante con instrucciones de llamar al 123 o ir a urgencias.
+
+**Condiciones detectadas (11 en total):**
+
+| Condición | Ejemplo de triggers |
+|---|---|
+| SCA / Infarto | `dolor de pecho + diaforesis`, `dolor precordial`, `infarto` |
+| ACV / Ictus | `cara caída`, `no puede hablar`, `debilidad + un lado`, `derrame cerebral` |
+| Sepsis | `fiebre + confusión + taquicardia`, `fiebre + hipotensión + deterioro rápido` |
+| Dengue grave | `fiebre + dolor abdominal intenso + vomito`, `dengue + sangrado` |
+| Anafilaxia | `garganta se cierra`, `dificultad respirar + alergia/picadura/medicamento` |
+| TEP | `embolia pulmonar`, `disnea súbita + cirugía`, `tos con sangre + dolor al respirar` |
+| Crisis hipertensiva | `presión muy alta + cefalea intensa`, `crisis hipertensiva` |
+| Abdomen agudo | `abdomen rígido`, `peritonitis`, `vientre duro + dolor abdominal` |
+| Eclampsia | `convulsión + embarazo/embarazada` |
+| Dificultad resp. severa | `no puedo respirar`, `asfixia`, `ahogamiento` |
+| Pérdida de consciencia | `inconsciente`, `no responde`, `perdió el conocimiento` |
+
+**Mecanismo:** cada condición tiene un conjunto de reglas. Una regla se cumple cuando **todos** sus términos aparecen en el texto normalizado (minúsculas + sin tildes). Basta con que **una regla** de una condición se cumpla para activar la alerta.
+
+**Respuesta cuando hay emergencia:**
+```json
+{
+  "nivel_urgencia": "emergencia",
+  "condicion_detectada": "Posible Síndrome Coronario Agudo (Infarto)",
+  "mensaje_emergencia": "Los síntomas descritos pueden indicar un infarto agudo de miocardio. Llama al 123 o ve a urgencias AHORA.",
+  "resumen_ia": "",
+  "terminos_extraidos": [],
+  "especialidades": []
+}
+```
+
+> Si **no** se detecta ninguna emergencia, el flujo continúa normalmente hacia GPT.
 
 ---
 
@@ -128,11 +176,17 @@ Donde $T$ es el conjunto de términos normalizados detectados por GPT.
 
 ---
 
-### Paso 3 — Ajuste demográfico: boost pediátrico
+### Paso 3 — Ajuste demográfico
 
-**Archivo:** `app/Services/RecomendadorService.php` → `applyPediatricBoost()`
+**Archivo:** `app/Services/RecomendadorService.php`
 
-Cuando el paciente tiene **menos de 14 años**, los síntomas generales (fiebre, tos, vómito, diarrea) producen scores similares entre `medicina_general` y `pediatria`. Para corregir esto, se aplica un ajuste de pesos posterior al scoring:
+El sistema aplica dos correcciones al top 3 de especialidades según la edad del paciente:
+
+#### Filtro para adultos (`>= 18 años`)
+Los pediatras no atienden adultos. Si la edad es 18 o más, `pediatria` se elimina del top 3 **antes** de continuar, y se restaura el top 3 con las siguientes especialidades en ranking.
+
+#### Boost pediátrico (`< 14 años`) — `applyPediatricBoost()`
+Cuando el paciente tiene menos de 14 años, los síntomas generales (fiebre, tos, vómito, diarrea) producen scores similares entre `medicina_general` y `pediatria`. Para corregir esto, se aplica un ajuste de pesos posterior al scoring:
 
 | Ajuste | Valor |
 |---|---|
@@ -141,6 +195,15 @@ Cuando el paciente tiene **menos de 14 años**, los síntomas generales (fiebre,
 | Si `pediatria` no puntuó en absoluto | Se inyecta con score base de 25 |
 
 Después del ajuste se reordena el top 3. El efecto práctico es que **Pediatría encabeza el resultado** para cualquier síntoma general en menores, a menos que un síntoma muy específico de otra especialidad (ej. cardiológico) tenga un score suficientemente alto para superarla.
+
+**Resumen del comportamiento por rango de edad:**
+
+| Rango | Comportamiento |
+|---|---|
+| `< 14 años` | Boost pediátrico aplicado |
+| `14 – 17 años` | Sin ajuste (adolescentes — zona gris clínica) |
+| `>= 18 años` | Pediatría excluida del top 3 |
+| Sin edad informada | Sin ajuste (insuficiente información) |
 
 ---
 
@@ -170,7 +233,7 @@ El endpoint `POST /api/analizar` acepta:
 | Campo | Tipo | Requerido | Descripción |
 |---|---|---|---|
 | `sintomas` | string | Sí | Descripción libre de los síntomas |
-| `edad` | integer | No | Edad en años — activa boost pediátrico si < 14 |
+| `edad` | integer | No | Edad en años — activa boost pediátrico si < 14; excluye Pediatría si >= 18 |
 | `sexo` | string | No | `masculino` / `femenino` — contexto para GPT |
 | `enfermedades_previas` | string | No | Antecedentes médicos del paciente |
 | `tiempo_evolucion` | string | No | Cuánto llevan los síntomas — contexto para GPT |
@@ -257,13 +320,22 @@ Tras el scoring, `medicina_general` y `pediatria` tienen scores similares (~15 p
 
 ---
 
+**Ejemplo con emergencia detectada:**
+
+> Paciente, **55 años**, describe: *"Tengo dolor de pecho intenso con diaforesis y el brazo izquierdo me está doliendo"*
+
+`EmergencyDetectorService` detecta la regla `['dolor de pecho', 'diaforesis']` (SCA) **antes de llamar a GPT**. La API devuelve `nivel_urgencia: emergencia` con la condición y mensaje. El frontend muestra el banner rojo pulsante con el botón **Llamar al 123** y enlace a urgencias cercanas. No se buscan médicos.
+
+---
+
 ## Evolución: del prototipo Python al sistema en producción
 
 | Aspecto | Prototipo (`motor_ia.py`) | Sistema final (Laravel + PHP) |
 |---|---|---|
 | Detección de especialidad | Diccionario simple (~15 palabras) | GPT-4o-mini + JSON ponderado (keywords / red_flags / negative_keywords) |
 | Contexto clínico | Sin contexto | Edad, sexo, antecedentes y tiempo de evolución enviados al modelo |
-| Ajuste demográfico | Ninguno | Boost pediátrico automático para menores de 14 años |
+| Ajuste demográfico | Ninguno | Boost pediátrico (< 14 años) + exclusión de Pediatría en adultos (>= 18 años) |
+| Detección de emergencias | Ninguna | `EmergencyDetectorService`: 11 condiciones críticas sin GPT, respuesta inmediata + banner de emergencia en frontend |
 | Entrada del usuario | Variable hardcodeada | Texto libre en interfaz web |
 | Geolocalización | Coordenadas fijas | GPS real del navegador (API Web Geolocation) |
 | Datos | CSV leído con pandas | MySQL, 3.526 médicos (dataset REPS, Cali) |
